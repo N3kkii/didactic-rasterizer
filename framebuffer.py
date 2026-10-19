@@ -3,48 +3,76 @@ import io
 from PIL import Image, ImageDraw
 
 class Framebuffer:
-    def __init__(self, width: int, height: int, gridsize: int):
+    def __init__(self, width: int, height: int, gridsize: int = 20):
         self.width, self.height = width, height
-        self.gridsize = gridsize
-        self._pixels = np.zeros((height*gridsize, width*gridsize), dtype=np.float32)
+        self.gs = gridsize
+        self._pixels = np.ones((height*gridsize, width*gridsize), dtype=np.float32)
+        self._points = []
+        self._lines = []
         self.grid_visible = True
 
+    # Drawing
     def __setitem__(self, pt, val):
 
         x, y = pt
         if not (0 <= x < self.width and 0 <= y < self.height):
             raise IndexError("Coordinates out of bounds")
         
-        x = x * self.gridsize
-        y = y * self.gridsize
+        x = x * self.gs
+        y = y * self.gs
 
-        self._pixels[y:y+self.gridsize, x:x+self.gridsize] = np.clip(val, 0.0, 1.0)
+        self._pixels[y:y+self.gs, x:x+self.gs] = np.clip(val, 0.0, 1.0)
+
+    def drawPoint(self, x, y, ratio = 0.2, c = 1):
+        self._points.append((x, y, ratio, c))
+
+    def drawLine(self, x0, y0, x1, y1, c=0.0, width=2):
+        self._lines.append((x0, y0, x1, y1, c, width))
 
     def __getitem__(self, pt):
         x, y = pt
         return self._pixels[y, x] if (0 <= x < self.width and 0 <= y < self.height) else 0.0
 
     def clear(self):
-        self._pixels.fill(0.0)
+        self._pixels.fill(1.0)
 
+    # Grid
     def show_grid(self):
         self.grid_visible = True
 
     def hide_grid(self):
         self.grid_visible = False
 
+    # Output
     def _repr_png_(self):
         
         img = Image.fromarray((self._pixels * 255).astype(np.uint8)).convert("RGBA")
         draw = ImageDraw.Draw(img)
 
-        gs = self.gridsize
+        gs = self.gs
+        h, w = self.height, self.width
 
+        # Draw a grid
         if self.grid_visible:
-            for x in range(self.width + 1):
-                draw.line([(x * gs, 0), (x * gs, self.height * gs)], fill=(50, 50, 50, 100), width=1)
-            for y in range(self.height + 1):
-                draw.line([(0, y * gs), (self.width * gs, y * gs)], fill=(50, 50, 50, 100), width=1)
+            for x in range(w + 1):
+                draw.line([(x * gs, 0), (x * gs, h * gs)], fill=(50, 50, 50, 100), width=1)
+            for y in range(h + 1):
+                draw.line([(0, y * gs), (w * gs, y * gs)], fill=(50, 50, 50, 100), width=1)
+
+        # Draw points
+        for x, y, ratio, c in self._points:
+            cx = (x + 0.5) * gs
+            cy = (y + 0.5) * gs
+            r = gs * ratio
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(0,0,0), width=1)
+
+        # Draw lines
+        for x0, y0, x1, y1, c, w in self._lines:
+            p0 = ((x0 + 0.5) * gs, (y0 + 0.5) * gs)
+            p1 = ((x1 + 0.5) * gs, (y1 + 0.5) * gs)
+            color = int(c*255)
+            draw.line([p0, p1], fill=(color, color, color), width=w)
+
 
         buf = io.BytesIO()
         img.save(buf, format="PNG")
