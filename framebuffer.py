@@ -6,7 +6,7 @@ class Framebuffer:
     def __init__(self, width: int, height: int, gridsize: int = 20):
         self.width, self.height = width, height
         self.gs = gridsize
-        self._pixels = np.ones((height*gridsize, width*gridsize), dtype=np.float32)
+        self._pixels = np.full((height*gridsize, width*gridsize, 3), 255, dtype=np.uint8)
         self._points = []
         self._lines = []
         self.grid_visible = True
@@ -21,20 +21,25 @@ class Framebuffer:
         x = x * self.gs
         y = y * self.gs
 
-        self._pixels[y:y+self.gs, x:x+self.gs] = np.clip(val, 0.0, 1.0)
+        self._pixels[y:y+self.gs, x:x+self.gs] = val
 
-    def drawPoint(self, x, y, ratio = 0.2, c = 1):
+    def drawPoint(self, x, y, ratio = 0.2, c = (0,0,0)):
         self._points.append((x, y, ratio, c))
 
-    def drawLine(self, x0, y0, x1, y1, c=0.0, width=2):
+    def drawLine(self, x0, y0, x1, y1, c=(0,0,0), width=2):
         self._lines.append((x0, y0, x1, y1, c, width))
 
     def __getitem__(self, pt):
         x, y = pt
-        return self._pixels[y, x] if (0 <= x < self.width and 0 <= y < self.height) else 0.0
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            raise IndexError("Index out of image")
+        
+        return self._pixels[y, x]
 
     def clear(self):
-        self._pixels.fill(1.0)
+        self._pixels.fill(255)
+        self._points.clear()
+        self._lines.clear()
 
     # Grid
     def show_grid(self):
@@ -46,7 +51,7 @@ class Framebuffer:
     # Output
     def _repr_png_(self):
         
-        img = Image.fromarray((self._pixels * 255).astype(np.uint8)).convert("RGBA")
+        img = Image.fromarray(self._pixels, mode="RGB").convert("RGBA")
         draw = ImageDraw.Draw(img)
 
         gs = self.gs
@@ -70,8 +75,7 @@ class Framebuffer:
         for x0, y0, x1, y1, c, w in self._lines:
             p0 = ((x0 + 0.5) * gs, (y0 + 0.5) * gs)
             p1 = ((x1 + 0.5) * gs, (y1 + 0.5) * gs)
-            color = int(c*255)
-            draw.line([p0, p1], fill=(color, color, color), width=w)
+            draw.line([p0, p1], fill=c, width=w)
 
 
         buf = io.BytesIO()
