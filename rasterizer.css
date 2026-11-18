@@ -1,0 +1,21 @@
+.rasterizer-container {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: monospace;
+}
+
+.rasterizer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rasterizer-controls input[type="range"] {
+  flex-grow: 1;
+}
+
+.rasterizer-label {
+  font-size: 13px;
+  min-width: 200px;
+}
