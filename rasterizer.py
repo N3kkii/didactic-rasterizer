@@ -12,6 +12,7 @@ class lineRasterizer(anywidget.AnyWidget):
     grid_size = traitlets.Int(25).tag(sync=True)
     steps = traitlets.List([]).tag(sync=True)
     vertices = traitlets.List().tag(sync=True)
+    animate = traitlets.Bool().tag(sync=True)
 
     def __init__(self, algorithm, vertices, width=20, height=20, grid_size = 25):
         super().__init__()
@@ -20,6 +21,7 @@ class lineRasterizer(anywidget.AnyWidget):
         self.grid_size = grid_size
         self.algorithm = algorithm
         self.vertices = [list(v) for v in vertices]
+        self.animate = True
         self._run()
         self.observe(self._run, names="vertices")
 

@@ -19,7 +19,13 @@ function render({ model, el }) {
   slider.min = "0";
   slider.value = "0";
 
-  controls.append(btnPrev, slider, btnNext);
+  const animLabel = document.createElement("label");
+  const animCheckbox = document.createElement("input");
+  animCheckbox.type = "checkbox";
+  animCheckbox.checked = model.get("animate");
+  animLabel.append(animCheckbox, " Animate");
+
+  controls.append(btnPrev, slider, btnNext, animLabel);
   container.append(canvas, controls);
   el.appendChild(container);
 
@@ -108,7 +114,16 @@ function render({ model, el }) {
 
   function play(delay = 50) {
     stopAnimation();
+    const animate = model.get("animate");
     const max = parseInt(slider.max, 10);
+
+    if (!animate) {
+      currentStep = max;
+      slider.value = max;
+      draw();
+      return;
+    }
+
     currentStep = 0;
     slider.value = 0;
     draw();
@@ -216,6 +231,17 @@ function render({ model, el }) {
   });
 
   model.on("change:vertices", draw);
+
+  animCheckbox.addEventListener("change", () => {
+    model.set("animate", animCheckbox.checked);
+    model.save_changes();
+  });
+
+  model.on("change:animate", () => {
+    animCheckbox.checked = model.get("animate");
+    play();
+  });
+
 
   updateSlider();
   play();
